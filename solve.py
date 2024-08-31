@@ -1,10 +1,10 @@
 from pwn import *
+#issues, one open is not working, and jmp is not working.
 
-
-#registers = [0]*7  #used for write register function, but will see. 400h se suru hone wala_
 valid_registers = [0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40]
+#registers = starts with vmcode+400h, stores abcdsif
 registers = {x: 0 for x in valid_registers}
-memory = {} #dictionary, stores key value pair
+memory = {} #dictionary
 
 #supporting functions
 def write_register(register, value):  #rdi: vm_code rsi: middle op code rdx: last op code
@@ -14,20 +14,7 @@ def write_register(register, value):  #rdi: vm_code rsi: middle op code rdx: las
         exit(-1)
 
     registers[register] = value
-    # if val1 == 0x40:
-    #     registers[0] = val2
-    # elif val1 == 0x1:
-    #     registers[1] = val2
-    # elif val1 == 0x10:
-    #     registers[2] = val2
-    # elif val1 == 0x20:
-    #     registers[3] = val2
-    # elif val1 == 0x4:
-    #     registers[4] = val2
-    # elif val1 == 0x2:
-    #     registers[5] = val2
-    # elif val1 == 0x8:
-    #     registers[6] = val2
+
 
 #describe register picks abcdsif
 def describe_register(val): #val is 2nd opcode
@@ -116,8 +103,6 @@ def interpret_stk(op_string): #20 02 01
         val = read_register(0x4)  #0
         write_register(0x4, val+1)
         reg_val = read_register(op_1) #0x9
-        # s4 = read_register(reg_val) # if we reg_val, there is no 0x9 register.
-        # print(f"s4 = {s4}")
         s5 = read_register(0x4)
         write_memory(s5, reg_val)
     if op_2 != 0:
@@ -145,15 +130,8 @@ def interpret_ldm(op_string):
     print(f"[s] LDM {s2} = *{s1}")
     s3 = read_register(op_string[2]) #315
     s4 = read_memory(s3)
-    #val1 val2
     write_register(op_string[1], s4)
 
-# read_memory (
-#    $rdi = 0x00007fffffffd800 → 0x0020010220090108,
-#    $rsi = 0x000000000000003b,
-#    $rdx = 0x000000000000003b,
-#    $rcx = 0x00007ffff7d14887 → 0x5177fffff0003d48 ("H="?)
-# )
 
 def interpret_cmp(op_string):
     op_1 = op_string[1]
@@ -164,7 +142,7 @@ def interpret_cmp(op_string):
 
     reg1_val = read_register(op_1)
     reg2_val = read_register(op_2)
-
+    write_register(0x8, 0x0)
     if abs(reg1_val) < abs(reg2_val):
         val = read_register(0x8)
         val ^= 0x8
@@ -218,6 +196,7 @@ def interpret_jmp(op_string):
         val = read_register(op_2)
         write_register(0x2, val)
 
+
 def get_str_from_mem(base):
     global memory
     new_str = ''
@@ -234,28 +213,14 @@ def get_str_from_mem(base):
             new_str += chr(val)
         base += 1
     return new_str
-        
-    # if val1 == 0x40:
-    #     registers[0] = val2
-    # elif val1 == 0x1:
-    #     registers[1] = val2
-    # elif val1 == 0x10:
-    #     registers[2] = val2
-    # elif val1 == 0x20:
-    #     registers[3] = val2
-    # elif val1 == 0x4:
-    #     registers[4] = val2
-    # elif val1 == 0x2:
-    #     registers[5] = val2
-    # elif val1 == 0x8:
-    #     registers[6] = val2
+
 
 def interpret_sys(op_string):
     op_1 = op_string[1]
     op_2 = op_string[2]
     s1 = describe_register(op_2)
     print(f"[s] SYS {hex(op_1)} {s1}")
-#open
+    #open
     if op_1 & 0x10 != 0x0:
         print("[s] ... open")
         # rax           rdi                      rsi            rdx
@@ -270,9 +235,8 @@ def interpret_sys(op_string):
         path = get_str_from_mem(0x300 + idx)
         #unsure of what path is
         print(f"CAlling OPEN: path {path} flag {hex(flags)} mode {hex(mode)}")
-        write_register(op_2) #open call karne ke jo return hoga wo pass karna he)
- 
-#read code       
+        write_register(op_2, 0xff) #open call karne ke jo return hoga wo pass karna he)
+    #read code       
     if op_1 & 0x1 != 0:
         print("[s] ... read_code")
         val = read_register(0x1)
@@ -294,8 +258,7 @@ def interpret_sys(op_string):
             for i in range(len(inp)):
                 write_memory(read_buf + i, ord(inp[i]))
             write_register(op_2, len(inp))
-
-#read memory
+    #read memory
     if op_1 & 0x4 != 0:
         print("[s] ... read_memory")
         val = read_register(0x1)
@@ -313,7 +276,7 @@ def interpret_sys(op_string):
             for i in range(len(inp)):
                 write_memory(read_buf + i, ord(inp[i]))
             write_register(op_2, len(inp))
-#write
+    #write
     if op_1 & 0x8 != 0:
         print("[s] ... write")
         #mem_val = read_memory(300) #lea rdx, [rax+300h], also thsi is mem address
@@ -326,18 +289,17 @@ def interpret_sys(op_string):
         count = val2 if val2 <= val3 else val3
         fd = read_register(0x40)
         print(f"calling write: fd {fd} buf {hex(buf)} count {hex(count)}")
-        print(memory)
+        #print(memory)
         new_str = get_str_from_mem(buf)  #this is call _write 
         print(new_str)
         write_register(op_2, len(new_str))
-
-#sleep
+    #sleep
     if op_1 & 0x20 != 0:
         print("[s] ... sleep")
         val = read_register(0x40)
         sleep(val/1000)
         write_register(op_2, 0)
-#exit
+    #exit
     if op_1 & 0x2 != 0:
         val = read_register(0x40)
         print(f"Exiting with {val}")
@@ -354,19 +316,13 @@ def interpret_sys(op_string):
     #     write_register(op_2, len(buf))
     #     print(buf)
              
-        
 
-
-
-
-
-def interpret_imm(value):  #code, op_string (will fix later)
-    s = describe_register(value[1])
-    v = value[2]
+def interpret_imm(op_string):  #code, op_string (will fix later)
+    s = describe_register(op_string[1])
+    v = op_string[2]
     print(f"[s] IMM {s} = {hex(v)}")
-    write_register(value[1], value[2])
+    write_register(op_string[1], op_string[2])
 
-   
 
 elf = './babyrev_level19.0'
 
@@ -384,46 +340,39 @@ if __name__ == '__main__':
     with open('./vm_code', 'rb') as f:
         code = f.read()
 
-#code for interpreter loop
-    #pc = 0
+    #code for interpreter loop
     end = False
     while not end:
-
-        # if pc + 3 > len(code):
-        #     print("End of code reached")
-        #     break
-        
-        pc = read_register(0x2)  #isko phir se dekhna parega 
-        # print(f"{hex(pc)} <- pc")
-        write_register(0x2, pc+1) #isko bhi dekhna
+        pc = read_register(0x2)
+        write_register(0x2, pc+1) 
         pc = pc*3
         op_string = code[pc:pc+3]
+        a = read_register(0x40)
+        b = read_register(0x1)
+        c = read_register(0x10)
+        d = read_register(0x20)
+        s = read_register(0x4)
+        i = read_register(0x2)
+        f = read_register(0x8)
+        print(f"[V] a:{hex(a)} b:{hex(b)} c:{hex(c)} d:{hex(d)} s:{hex(s)} i:{hex(i)} f:{hex(f)}")
+        print(f"[I] op:{hex(op_string[0])} arg1:{hex(op_string[1])} arg2:{hex(op_string[2])}")
 
         #code for interpret instruction (arguments - rsi: 3 bytes of opcode rdi: vm_code)
         if op_string[0] == 0x8:
-            # print(f"IMM: REG {hex(op_string[1])} VALUE {hex(op_string[2])}")
             interpret_imm(op_string)
         elif op_string[0] == 0x2:
-            #print(f"ADD: REG {hex(op_string[1])} VALUE {hex(op_string[2])}")
             interpret_add(op_string)
         elif op_string[0] == 0x20:
-            #print(f"STK: REG {hex(op_string[1])} VALUE {hex(op_string[2])}")
             interpret_stk(op_string)
         elif op_string[0] == 0x1:
-            #print(f"STM: REG {hex(op_string[1])} VALUE {hex(op_string[2])}")
             interpret_stm(op_string)
         elif op_string[0] == 0x4:
-            #print(f"LDM: REG {hex(op_string[1])} VALUE {hex(op_string[2])}")
             interpret_ldm(op_string)
         elif op_string[0] == 0x10:
-            #print(f"CMP: REG {hex(op_string[1])} VALUE {hex(op_string[2])}")
             interpret_cmp(op_string)
         elif op_string[0] == 0x80:
-            #print(f"JMP: REG {hex(op_string[1])} VALUE {hex(op_string[2])}")
             interpret_jmp(op_string)
         elif op_string[0] == 0x40:
-            #print(f"SYS: REG {hex(op_string[1])} VALUE {hex(op_string[2])}")
             interpret_sys(op_string)
-
-
-    
+        
+        print(" ")
