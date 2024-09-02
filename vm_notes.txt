@@ -1,0 +1,297 @@
+REGISTERS:
+a: a1[1024], or 0x40
+b: a1[1025], or 0x1
+c: a1[1026], or 0x10
+d: a1[1027], or 0x20
+s: a1[1028], or 0x4  #stack pointer (length of our stack)
+i: a1[1029], or 0x2  
+f: a1[1030]; or 0x8 #flag register
+
+ORDERING:
+OP_CODE ARG2 ARG1
+
+IMM: 0x8 #loads arg2 into register arg1
+ADD: 0x2 #adds values in registers arg1, arg2, stores in arg1
+STK: 0x20 #pushes imm in arg1, pops into register arg2
+STM: 0x1 # * register arg1 = values in register arg2
+LDM: 0x4 #loads value pointed to by register arg2 into register arg1
+CMP: 0x10
+JMP: 0x80
+SYS: 0x40
+
+CMP:
+    reg1_val = read_register(op_1)
+    reg2_val = read_register(op_2)
+    write_register(0x8, 0x0)
+    if abs(reg1_val) < abs(reg2_val):
+        val = read_register(0x8)
+        val ^= 0x8
+        write_register(0x8, val)
+    
+    if abs(reg1_val) > abs(reg2_val):
+        val = read_register(0x8)
+        val ^= 0x2
+        write_register(0x8, val)
+
+    if reg1_val == reg2_val:
+        val = read_register(0x8)
+        val ^= 0x4
+        write_register(0x8, val)
+
+    if reg1_val != reg2_val:
+        val == read_register(0x8)
+        val ^= 0x10
+        write_register(0x8, val)
+
+    if reg1_val == 0 and reg2_val == 0:
+        val = read_register(0x8)
+        val ^= 0x1
+        write_register(0x8, val)
+
+describe flag:
+
+0x8 += L   4c
+0x2 += G   47
+0x4 += E   45
+0x10 += N  4e
+0x1 += z   5a
+0x0 += *   2a
+
+SYS:
+0x10 open
+0x1 read code
+0x4 read memory
+0x8 write
+0x20 sleep
+0x2 exit
+
+#interpreted result
+
+0x1     :        IMM b 0x9
+0x2     :        STK i b
+0x3     :        STK NONE a
+0x4     :        STK NONE b
+0x5     :        STK NONE c
+0x6     :        STK c NONE
+0x7     :        STK b NONE
+0x8     :        STK a NONE
+0x9     :        IMM i 0x4a
+0xa     :        IMM d 0x30 --> flag ends here
+0xb     :        IMM c 0x99
+0xc     :        STM*c = d
+0xd     :        IMM d 0x28
+0xe     :        IMM c 0x9a
+0xf     :        STM*c = d
+0x10    :        IMM d 0x8d
+0x11    :        IMM c 0x9b
+0x12    :        STM*c = d
+0x13    :        IMM d 0xfc
+0x14    :        IMM c 0x9c
+0x15    :        STM*c = d
+0x16    :        IMM d 0xa1
+0x17    :        IMM c 0x9d
+0x18    :        STM*c = d
+0x19    :        IMM d 0xd9
+0x1a    :        IMM c 0x9e
+0x1b    :        STM*c = d
+0x1c    :        IMM d 0xb2
+0x1d    :        IMM c 0x9f
+0x1e    :        STM*c = d
+0x1f    :        IMM d 0x4
+0x20    :        IMM c 0xa0
+0x21    :        STM*c = d
+0x22    :        IMM d 0x8f
+0x23    :        IMM c 0xa1
+0x24    :        STM*c = d
+0x25    :        IMM d 0xd4
+0x26    :        IMM c 0xa2
+0x27    :        STM*c = d
+0x28    :        IMM d 0x86
+0x29    :        IMM c 0xa3
+0x2a    :        STM*c = d
+0x2b    :        IMM d 0x6b
+0x2c    :        IMM c 0xa4
+0x2d    :        STM*c = d
+0x2e    :        IMM d 0xc8
+0x2f    :        IMM c 0xa5
+0x30    :        STM*c = d
+0x31    :        IMM d 0x18  --> the actual flag starts here
+0x32    :        IMM c 0xa6
+0x33    :        STM*c = d
+0x34    :        IMM i 0xa7  //addess of exit after printing flag
+0x35    :        ADD a c
+0x36    :        ADD b c
+0x37    :        IMM d 0xff
+0x38    :        ADD a d
+0x39    :        ADD b d
+0x3a    :        STK NONE a
+0x3b    :        STK NONE b
+0x3c    :        LDM a =*a
+0x3d    :        LDM b =*b
+0x3e    :        CMP a b
+0x3f    :        STK b NONE
+0x40    :        STK a NONE
+0x41    :        IMM d 0x48
+0x42    :        JMP N 
+0x43    :        IMM d 0xff
+0x44    :        ADD c d
+0x45    :        IMM d 0x0
+0x46    :        CMP c d
+0x47    :        IMM d 0x36
+0x48    :        JMP N 
+0x49    :        STK d c
+0x4a    :        STK i NONE
+0x4b    :        IMM a 0x30
+0x4c    :        IMM b 0x9b
+0x4d    :        IMM c 0xc
+0x4e    :        IMM d 0x2
+0x4f    :        ADD d i
+0x50    :        STK NONE d
+0x51    :        IMM i 0x34
+0x52    :        IMM c 0x0
+0x53    :        CMP d c
+0x54    :        IMM d 0x57
+0x55    :        JMP E 
+0x56    :        IMM d 0xc7
+0x57    :        JMP LG 
+0x58    :        IMM b 0x1
+0x59    :        ADD b s
+0x5a    :        IMM d 0x43  //correct writing starts here
+0x5b    :        STK NONE d
+0x5c    :        IMM d 0x4f
+0x5d    :        STK NONE d
+0x5e    :        IMM d 0x52
+0x5f    :        STK NONE d
+0x60    :        IMM d 0x52
+0x61    :        STK NONE d
+0x62    :        IMM d 0x45
+0x63    :        STK NONE d
+0x64    :        IMM d 0x43
+0x65    :        STK NONE d
+0x66    :        IMM d 0x54
+0x67    :        STK NONE d
+0x68    :        IMM d 0x21
+0x69    :        STK NONE d
+0x6a    :        IMM d 0x20
+0x6b    :        STK NONE d
+0x6c    :        IMM d 0x59
+0x6d    :        STK NONE d
+0x6e    :        IMM d 0x6f
+0x6f    :        STK NONE d
+0x70    :        IMM d 0x75
+0x71    :        STK NONE d
+0x72    :        IMM d 0x72
+0x73    :        STK NONE d
+0x74    :        IMM d 0x20
+0x75    :        STK NONE d
+0x76    :        IMM d 0x66
+0x77    :        STK NONE d
+0x78    :        IMM d 0x6c
+0x79    :        STK NONE d
+0x7a    :        IMM d 0x61
+0x7b    :        STK NONE d
+0x7c    :        IMM d 0x67
+0x7d    :        STK NONE d
+0x7e    :        IMM d 0x3a
+0x7f    :        STK NONE d
+0x80    :        IMM d 0xa
+0x81    :        STK NONE d
+0x82    :        IMM c 0x14
+0x83    :        IMM a 0x1
+0x84    :        SYS WRITE (a, b, c) d //writes correct
+0x85    :        IMM d 0x2f
+0x86    :        IMM c 0x80
+0x87    :        STM*c = d
+0x88    :        IMM d 0x66
+0x89    :        IMM c 0x81
+0x8a    :        STM*c = d
+0x8b    :        IMM d 0x6c
+0x8c    :        IMM c 0x82
+0x8d    :        STM*c = d
+0x8e    :        IMM d 0x61
+0x8f    :        IMM c 0x83
+0x90    :        STM*c = d
+0x91    :        IMM d 0x67
+0x92    :        IMM c 0x84
+0x93    :        STM*c = d
+0x94    :        IMM d 0x0
+0x95    :        IMM c 0x85
+0x96    :        STM*c = d
+0x97    :        IMM a 0x80
+0x98    :        IMM b 0x0
+0x99    :        SYS OPEN (a, b, c) d  //open /flag
+0x9a    :        IMM b 0x0
+0x9b    :        ADD b s
+0x9c    :        IMM c 0xff
+0x9d    :        IMM a 0x0
+0x9e    :        ADD a d
+0x9f    :        SYS READ MEMORY (a, b, c) d
+0xa0    :        IMM b 0x0
+0xa1    :        ADD b s
+0xa2    :        IMM c 0x0
+0xa3    :        ADD c d
+0xa4    :        IMM a 0x1
+0xa5    :        SYS WRITE (a, b, c) d
+0xa6    :        IMM a 0x0
+0xa7    :        SYS exit (a) NONE
+0xa8    :        STK NONE a
+0xa9    :        STK NONE b
+0xaa    :        STK NONE c
+0xab    :        IMM b 0x1
+0xac    :        ADD b s
+0xad    :        IMM d 0x4b
+0xae    :        STK NONE d
+0xaf    :        IMM d 0x45
+0xb0    :        STK NONE d
+0xb1    :        IMM d 0x59
+0xb2    :        STK NONE d
+0xb3    :        IMM d 0x3a
+0xb4    :        STK NONE d
+0xb5    :        IMM d 0x20
+0xb6    :        STK NONE d
+0xb7    :        IMM c 0x5
+0xb8    :        IMM a 0x1
+0xb9    :        SYS WRITE (a, b, c) d
+0xba    :        STK c NONE
+0xbb    :        STK b NONE
+0xbc    :        STK a NONE
+0xbd    :        STK NONE a
+0xbe    :        STK NONE b
+0xbf    :        STK NONE c
+0xc0    :        IMM b 0x30
+0xc1    :        IMM c 0xe
+0xc2    :        IMM a 0x0
+0xc3    :        SYS READ MEMORY (a, b, c) d
+0xc4    :        STK c NONE
+0xc5    :        STK b NONE
+0xc6    :        STK a NONE
+0xc7    :        IMM i 0x2
+0xc8    :        IMM b 0x1
+0xc9    :        ADD b s
+0xca    :        IMM d 0x49  //incorrect writing starts here
+0xcb    :        STK NONE d
+0xcc    :        IMM d 0x4e
+0xcd    :        STK NONE d
+0xce    :        IMM d 0x43
+0xcf    :        STK NONE d
+0xd0    :        IMM d 0x4f
+0xd1    :        STK NONE d
+0xd2    :        IMM d 0x52
+0xd3    :        STK NONE d
+0xd4    :        IMM d 0x52
+0xd5    :        STK NONE d
+0xd6    :        IMM d 0x45
+0xd7    :        STK NONE d
+0xd8    :        IMM d 0x43
+0xd9    :        STK NONE d
+0xda    :        IMM d 0x54
+0xdb    :        STK NONE d
+0xdc    :        IMM d 0x21
+0xdd    :        STK NONE d
+0xde    :        IMM d 0xa
+0xdf    :        STK NONE d
+0xe0    :        IMM c 0xb
+0xe1    :        IMM a 0x1
+0xe2    :        SYS WRITE (a, b, c) d  //writes incorrect
+0xe3    :        IMM a 0x1
+0xe4    :        SYS exit (a) NONE

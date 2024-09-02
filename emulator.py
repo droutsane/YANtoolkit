@@ -41,8 +41,26 @@ def describe_register(val): #val is 2nd opcode
 def describe_instruction():
     pass
 
-def describe_flags():
-    pass
+def describe_flags(a1):
+    v2 = 0
+    if (a1 & 0x8 ) != 0:
+        flag
+
+# def describe_flag(inp):
+#     fl = ""
+#     if inp & 0x8 != 0:
+#         fl += 'L'
+#     if inp & 0x2 != 0:
+#         fl += 'G'
+#     if inp & 0x4 != 0:
+#         fl += 'E'
+#     if inp & 0x10 != 0:
+#         fl += 'N'
+#     if inp & 0x1 != 0:
+#         fl += 'z'
+#     if inp & 0x0 != 0:
+#         fl += '*'
+#     return fl
 
 def read_register(register): #rdi vm_code rsi 1  rdx 1  op_string_p is the op_str + position
     # if op_string_p == 0x40:
@@ -172,29 +190,36 @@ def interpret_cmp(op_string):
 def interpret_jmp(op_string):
     print("-----------------><-----------------------")
     s1 = describe_register(op_string[2])
-    s2 = describe_register(op_string[1])
+    s2 = describe_flag(op_string[1])
     print(f"[j] JMP {s2} {s1}")
 
     op_1 = op_string[1]
     op_2 = op_string[2]
-
-    is_zero1 = False
-    is_zero2 = True
-    val = op_1
-    if op_1 != 0:
-        val = read_register(0x8)
-        val &= op_1
-        if val != 0:
-            is_zero1 = val == 0
-            is_zero2 = False
-
-    if not is_zero2:
+    flag = read_register(0x8)
+    if op_1 and (op_2 & flag) == 0:
         print("[j] ... NOT TAKEN")
+    
+    print("[j] ... TAKEN")
+    result = read_register(op_2)
+    write_register(0x2, result)
+    # is_zero1 = False
+    # is_zero2 = True
+    # val = op_1
+    # if op_1 != 0:
+    #     val = read_register(0x8)
+    #     val &= op_1
+    #     if val != 0:
+    #         is_zero1 = val == 0
+    #         is_zero2 = False
 
-    if not is_zero1 or is_zero2:
-        print("[j] ... TAKEN")
-        val = read_register(op_2)
-        write_register(0x2, val)
+    # if not is_zero2:
+    #     print("[j] ... NOT TAKEN")
+
+    # if not is_zero1 or is_zero2:
+    #     print("[j] ... TAKEN")
+    #     val = read_register(op_2)
+    #     write_register(0x2, val)
+
 
 
 def get_str_from_mem(base):
