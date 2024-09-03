@@ -41,26 +41,22 @@ def describe_register(val): #val is 2nd opcode
 def describe_instruction():
     pass
 
-def describe_flags(a1):
-    v2 = 0
-    if (a1 & 0x8 ) != 0:
-        flag
 
-# def describe_flag(inp):
-#     fl = ""
-#     if inp & 0x8 != 0:
-#         fl += 'L'
-#     if inp & 0x2 != 0:
-#         fl += 'G'
-#     if inp & 0x4 != 0:
-#         fl += 'E'
-#     if inp & 0x10 != 0:
-#         fl += 'N'
-#     if inp & 0x1 != 0:
-#         fl += 'z'
-#     if inp & 0x0 != 0:
-#         fl += '*'
-#     return fl
+def read_flag(inp):
+    fl = ""
+    if inp & 0x8 != 0:
+        fl += 'L'
+    if inp & 0x2 != 0:
+        fl += 'G'
+    if inp & 0x4 != 0:
+        fl += 'E'
+    if inp & 0x10 != 0:
+        fl += 'N'
+    if inp & 0x1 != 0:
+        fl += 'z'
+    if inp & 0x0 != 0:
+        fl += '*'
+    return fl
 
 def read_register(register): #rdi vm_code rsi 1  rdx 1  op_string_p is the op_str + position
     # if op_string_p == 0x40:
@@ -147,7 +143,7 @@ def interpret_ldm(op_string):
     s2 = describe_register(op_string[1])
     print(f"[s] LDM {s2} = *{s1}")
     s3 = read_register(op_string[2]) #315
-    s4 = read_memory(s3)
+    s4 = 0x1 #read_memory(s3)
     write_register(op_string[1], s4)
 
 
@@ -188,9 +184,9 @@ def interpret_cmp(op_string):
 
 
 def interpret_jmp(op_string):
-    print("-----------------><-----------------------")
+    print("-----------------><--------------------")
     s1 = describe_register(op_string[2])
-    s2 = describe_flag(op_string[1])
+    s2 = read_flag(op_string[1])
     print(f"[j] JMP {s2} {s1}")
 
     op_1 = op_string[1]
@@ -251,7 +247,7 @@ def interpret_sys(op_string):
         # rax           rdi                      rsi            rdx
         #2	  sys_open	const char *filename	int flags	int mode
         mode = read_register(0x10)
-        flags = read_register(0x1)
+        flags = read_flag(0x1)
         idx = read_register(0x40)
         #iske baad ka open kaise call hua wo samajh me nahi aa raha he
         #here we need to call open
@@ -259,7 +255,7 @@ def interpret_sys(op_string):
         print("FINDING PATH")
         path = get_str_from_mem(0x300 + idx)
         #unsure of what path is
-        print(f"CAlling OPEN: path {path} flag {hex(flags)} mode {hex(mode)}")
+        print(f"CAlling OPEN: path {path} flag {flags} mode {hex(mode)}")
         write_register(op_2, 0xff) #open call karne ke jo return hoga wo pass karna he)
     #read code       
     if op_1 & 0x1 != 0:
@@ -399,5 +395,4 @@ if __name__ == '__main__':
             interpret_jmp(op_string)
         elif op_string[0] == 0x40:
             interpret_sys(op_string)
-        
         print(" ")

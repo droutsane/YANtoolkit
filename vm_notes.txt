@@ -295,3 +295,4 @@ SYS:
 0xe2    :        SYS WRITE (a, b, c) d  //writes incorrect
 0xe3    :        IMM a 0x1
 0xe4    :        SYS exit (a) NONE
+
